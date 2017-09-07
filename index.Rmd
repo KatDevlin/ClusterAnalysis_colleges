@@ -1,66 +1,72 @@
-# Sample dataset - University Admission Statistics
+---
+title: "ClusterAnalysis_colleges"
+author: "Kat Devlin"
+date: "2017年9月7日"
+output: html_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 par(ask=FALSE)
-
-# load relevant libraries
 library(TeachingDemos)
 library(fpc)
 library(cluster)
 
 x <- read.csv("Universities.csv", as.is=T)
-# Minkowski distance - either Euclidean or Manhattan -  seems most appropriate 
-# for the data,  which includes non-redundant continuous variables. 
-# If the data were in the form of counts we would look toward canberra distance 
-# instead, for instance. 
-# Yes, will need to standardize data to perform distance calculations. 
-# All variables are on separate scales. 
+```
 
+Minkowski distance - either Euclidean or Manhattan -  seems most appropriate for the data,  which includes non-redundant continuous variables. If the data were in the form of counts we would look toward, for instance, canberra distance instead. 
+
+We will need to standardize data to perform the distance calculations. All variables in original set are on separate scales. 
+
+```{r standard}
 round(sqrt(apply(x[,-1],2,var)),2)
 
 x.scale <- scale(x[,-1])
 rownames(x.scale) = x[,1]
-faces(x.scale, labels=x$University, ncol=5)
-stars(x.scale, labels=as.character(x$University), ncol=5)
-stars(x.scale, labels=as.character(x$University), ncol=5, draw.segments=T)
+```
 
+The data now appears to be multivariate normal.
+```{r MultiNormal, echo=FALSE}
 source("http://www.reuningscherer.net/STAT660/R/CSQPlot.r.txt")
 CSQPlot(x.scale[,1:6], label="University Admission Data")
 boxplot(x.scale)
+```
 
-## 2 
-# Appears to be four clusters in the first method, which is supported by 
-# the hclus_eval as well.
-# The clusters also make "sense" when thinking about the schools included 
-# together in the dendograms and other visualizations.  E.g. Yale and Harvard 
-# are paired together, as are Texas A&M and Penn State.  
-# Four clusters also captures the "outliers" of Caltech and Johns Hopkins. 
-# In the second method, however, three clusters makes the most sense. 
-# Using four splits Caltech and Johns Hopkins but combines Columbia and 
-# Georgetown, which seem to have less in common. We are have less confidence
-# in this method compared to the first since the cluster divisions fall in 
-# in between Universities on the "lowest branches." e.g. Purdue and Texas A&M.
+It seems there are four or five clusters in the first method, which is supported by the hclus_eval as well. The dendrogram supports five, but our hypothesis of four is supported when considering the first two principal components.
 
-# Method 1
+The clusters make sense when thinking about the schools included together in the dendograms and other visualizations.  E.g. Yale and Harvard are paired together, as are Texas A&M and Penn State.  
+
+
+```{r Method1, echo=FALSE}
 dist1 <- dist(x.scale, method = "euclidean", p=2)
 clust1<-hclust(dist1,method="ward.D")
 plot(clust1,labels=x$University,cex=0.5,xlab="",ylab="Distance"
      ,main="Clustering for Universities")
-rect.hclust(clust1,k=4)
-
+rect.hclust(clust1,k=5)
+```
+```{r cuts, echo=FALSE}
 cuts1 = cutree(clust1,k=4)
 cuts1
 
 clusplot(x.scale, cuts1, color=TRUE, shade=TRUE, labels=2, lines=0,
          main="University Cluster Plot, Ward's Method, First two PC")
 
+
 plotcluster(x.scale, cuts1, main="Three Cluster Solution in DA Space",
             xlab="First Discriminant Function", ylab="Second Discriminant Function")
+```
 
+```{r clusteval, echo=FALSE}
 # Evaluate Number of Clusters
 source("http://reuningscherer.net/stat660/R/HClusEval.R.txt")
 hclus_eval(x.scale, dist_m = 'euclidean', clus_m = 'ward.D', plot_op = T)
+```
 
-# Method 2 
+Four/five cluster approaches capture the "outliers" of Caltech and Johns Hopkins. In our second method, below, three clusters makes the most sense. 
+
+Using four splits Caltech and Johns Hopkins but combines Columbia and Georgetown, which seem to have less in common. We are have less confidence in this method compared to the first since the cluster divisions fall in between Universities on the "lowest branches," e.g. Purdue and Texas A&M.
+```{r Method2, echo=FALSE}
 library(vegan)
 dist2 <- vegdist(x.scale, method="manhattan", upper=T)
 clust2 <- hclust(dist2, method="complete")
@@ -78,17 +84,12 @@ plotcluster(x.scale, cuts2, main="Two Cluster Solution in DA Space",
 
 source("http://reuningscherer.net/stat660/R/HClusEval.R.txt")
 hclus_eval(x.scale, dist_m = 'manhattan', clus_m = 'complete', plot_op = T)
+```
+As mentioned above there appears to be three to five clusters. Attempting to use more than five leads to unusual groupings. We plan to retain three clusters.    
 
-## 3 
-# As mentioned above there appears to be three to five clusters. Attempting
-# to use more than five leads to unusual groupings.  
-# We plan to retain three clusters.    
+We run a k-means plot, several sum of squares plots and use Hartigan's rule of thumb  below. In all cases the results indicate 3 clusters. This agrees with our observations used in the hierarchical analysis above. 
 
-## 4 
-# We run k-means plot and several sum of squares plot below. In all cases
-# the results indicate 3 clusters. This agrees with Method 1 used in the 
-# hierarchical analysis from Q2. 
-
+```{r kmeans, echo=FALSE}
 km1 <- kmeans(x.scale,centers=3, nstart=100)
 pairs(x.scale, col=km1$cluster)
 plot(x.scale, col = km1$cluster, pch = 19, frame = FALSE,
@@ -126,7 +127,9 @@ plot(1:k.max, wss,
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
 abline(v = 3, lty =2)
+```
 
+```{r evaluations, echo=FALSE}
 #kdata is just normalized input dataset
 kdata=x.scale
 n.lev=15  #set max value for k
@@ -228,8 +231,8 @@ lines(r.sse.min, type='l', col='red')
 legend('topright',c('SSE - random SSE', 'SD of SSE-random SSE'), col=c('blue', 'red'), lty=1)
 
 # Again indicates 3
+```
 
-## 5 
-# We believe there are three clusters present based on the information provided above. The 
-# visualizations and k-means analysis correspond to this number.  
+
+We believe there are three clusters present based on the information provided above. The visualizations and k-means analysis correspond to this number. Further analysis could be done using discriminant analysis to verfiy our decisions. 
 
